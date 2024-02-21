@@ -8,16 +8,18 @@ use crossterm::{
     ExecutableCommand
 };
 use ratatui::{
-    prelude::{CrosstermBackend, Terminal, Style, Frame},
-    widgets::Paragraph, widgets::{Block, Borders},
+    prelude::*,
+    widgets::{Paragraph, Gauge}, widgets::{Block, Borders, BorderType},
 };
-use std::io::{stdout, Result};
+use std::io::stdout;
+use anyhow::Result;
 
 struct App {
     counter: u32,
     should_quit: bool,
     background_color: ratatui::style::Color,
 }
+
 
 fn startup() -> Result<()> {
     enable_raw_mode()?; 
@@ -32,21 +34,62 @@ fn shutdown() -> Result<()> {
 }
 
 fn ui(app: &App, f: &mut Frame) {
-    let block = Block::default()
+
+    let layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(vec![
+            Constraint::Percentage(25),
+            Constraint::Percentage(5),
+            Constraint::Percentage(70),
+        ])
+        .split(f.size());
+
+
+    // top
+    let top_block = Block::default()
         .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
         .title("Twitch Stream TUI");
+    
     f.render_widget(
-        // createing a new paragraph
         Paragraph::new(format!("Current count: {}", app.counter))
-            .block(block)
+            .block(top_block)
             .style(Style::new().fg(ratatui::style::Color::Black).bg(app.background_color)),
-        // paragraph size
-        {
-            let mut r = f.size();
-            r.height = r.height/2;
-            r
-        }
-        );
+        layout[0],
+    );
+
+    // mid
+    let mid_block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .title("Progress");
+    f.render_widget(
+        Gauge::default()
+            .block(mid_block)
+            .gauge_style(
+                Style::default()
+                    .fg(Color::Yellow)
+                    .bg(Color::Blue)
+                    .add_modifier(Modifier::BOLD),
+            )
+            .percent(37),
+        layout[1]
+    );
+
+    // bottom
+    let bottom_block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .title("Main");
+    f.render_widget(
+        Paragraph::new("There is some text here too!")
+            .block(bottom_block)
+            .alignment(Alignment::Center)
+            .style(Style::new().fg(ratatui::style::Color::LightBlue).bg(ratatui::style::Color::Black)),
+        layout[2],
+    );
+
+
 }
 
 fn update(app: &mut App) -> Result<()> {
@@ -80,7 +123,7 @@ fn run() ->  Result<()> {
     let mut app = App {
         counter: 0,
         should_quit: false,
-        background_color: ratatui::style::Color::White,
+        background_color: ratatui::style::Color::DarkGray,
     };
 
     loop {
